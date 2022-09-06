@@ -1,0 +1,41 @@
+# GnomAD VCF sites:
+# - https://gnomad.broadinstitute.org/downloads
+# - https://macarthurlab.org/2018/10/17/gnomad-v2-1/
+# Lifted over to hg38 by Gnomad team
+# Script
+# - filters only PASS variants (segdup, decoy are retained)
+# - removes many INFO fields to reduce file size: controls_, hist, non_, using bcftools annotate instead of vt rminfo, because it failed randomly on chr1
+# recipe test: https://github.com/chapmanb/cloudbiolinux/blob/master/doc/hacking.md#testing-a-ggd-recipe
+# much faster from gnomad in the google cloud - download in 20-25 min on O2
+# vt is 3x faster than bcftools for removing INFO tags: in a test with 4444 variants t(bcftools -x) = t(bcftools -x "^") = 27s, time(vt rminfo) = 8s,
+# but vt rminfo is failing after 148M, using bcftools
+# processing time: 87G to 4G in 7h
+# there are no native hg38 exome calls in gnomad.v3 - only for genomes, so exome variants are still lifted over from grch37,
+# and they need processing because liftover creates duplicated variants
+# receipe version is the same - the old installations won't be reinstalled
+---
+attributes:
+  name: gnomad_exome
+  version: 2.1.2
+recipe:
+  full:
+    recipe_type: bash
+    recipe_cmds:
+      - |
+        gsutil cp gs://gcp-public-data--gnomad/release/2.1.1/liftover_grch38/vcf/exomes/gnomad.exomes.r2.1.1.sites.liftover_grch38.vcf.bgz .
+        gsutil cp gs://gcp-public-data--gnomad/release/2.1.1/liftover_grch38/vcf/exomes/gnomad.exomes.r2.1.1.sites.liftover_grch38.vcf.bgz.tbi .
+        vcf_file=gnomad.exomes.r2.1.1.sites.liftover_grch38.vcf.bgz
+        mkdir -p variation
+        export TMPDIR=`pwd`
+        gnomad_fields_to_keep_url=https://raw.githubusercontent.com/chapmanb/cloudbiolinux/master/ggd-recipes/hg38/gnomad_fields_to_keep.txt
+        wget --no-check-certificate -c $gnomad_fields_to_keep_url
+        fields_to_keep="INFO/"$(cat gnomad_fields_to_keep.txt | paste -s | sed s/"\t"/",INFO\/"/g)
+        ref=../seq/hg38.fa
+        bcftools view -f PASS $vcf_file | bcftools annotate -x "^$fields_to_keep" -Ov | vt decompose -s - | vt normalize -r $ref -n - | vt uniq - | bgzip -c > variation/gnomad_exome.vcf.gz
+        tabix -f -p vcf variation/gnomad_exome.vcf.gz
+        tabix -f -p vcf --csi variation/gnomad_exome.vcf.gz
+        rm $vcf_file $vcf_file.tbi
+    recipe_outfiles:
+      - variation/gnomad_exome.vcf.gz
+      - variation/gnomad_exome.vcf.gz.tbi
+      - variation/gnomad_exome.vcf.gz.csi
