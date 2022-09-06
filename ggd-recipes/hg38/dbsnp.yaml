@@ -1,0 +1,37 @@
+# install time: 1h20min
+# install size: 16G
+# order of files in recipe_outfiles is important
+# first come symlinks, than real files.
+# otherwise real files get copied first, and symlinks become corrupt
+---
+attributes:
+  name: dbsnp
+  version: 154-20210112
+recipe:
+  full:
+    recipe_type: bash
+    recipe_cmds:
+      - |
+        build=154
+        version=GCF_000001405.38
+        url=http://ftp.ncbi.nih.gov/snp/archive/b$build/VCF/$version.gz
+        remap_url=https://gist.githubusercontent.com/matthdsm/f833aedd2d67e28013ff1d171c70f4ee/raw/442a45ed3ddc6e85c66c5e58e0fa78e16a0821c8/refseq2ucsc.tsv
+        mkdir -p variation
+        cd variation
+        wget -c -O dbsnp-${build}-orig.vcf.gz $url
+        wget -c -O dbsnp-${build}-orig.vcf.gz.tbi $url.tbi
+        [[ -f dbsnp-$build.vcf.gz ]] || bcftools annotate -Ou --rename-chrs $remap_url dbsnp-$build-orig.vcf.gz |\
+        bcftools sort -m 1G -Oz -T . -o dbsnp-$build.vcf.gz && \
+        tabix -f -p vcf -C dbsnp-${build}.vcf.gz
+        tabix -f -p vcf dbsnp-${build}.vcf.gz        
+        ln -sf dbsnp-${build}.vcf.gz dbsnp.vcf.gz
+        ln -sf dbsnp-${build}.vcf.gz.tbi dbsnp.vcf.gz.tbi
+        ln -sf dbsnp-${build}.vcf.gz.csi dbsnp.vcf.gz.csi
+        cd ..
+    recipe_outfiles:
+      - variation/dbsnp.vcf.gz
+      - variation/dbsnp.vcf.gz.csi
+      - variation/dbsnp.vcf.gz.tbi
+      - variation/dbsnp-154.vcf.gz
+      - variation/dbsnp-154.vcf.gz.csi
+      - variation/dbsnp-154.vcf.gz.tbi 

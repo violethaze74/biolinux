@@ -1,0 +1,24 @@
+# ClinVar: http://www.clinvar.com/
+# UCSFify name sed magic from: https://github.com/mmarchin/utilities/blob/master/ucscify.sh
+---
+attributes:
+  name: clinvar
+  version: 20210110
+recipe:
+  full:
+    recipe_type: bash
+    recipe_cmds:
+      - |
+        release=20210110
+        # the latest version
+        baseurl=https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh37/clinvar.vcf.gz
+        mkdir -p variation
+        wget --no-check-certificate -c -O variation/clinvar-orig.vcf.gz $baseurl
+        # remove old files
+        rm -f variation/clinvar.vcf.gz
+        rm -f variation/clinvar.vcf.gz.tbi
+        zcat variation/clinvar-orig.vcf.gz | bgzip -c > variation/clinvar.vcf.gz
+        tabix -f -p vcf variation/clinvar.vcf.gz
+    recipe_outfiles:
+      - variation/clinvar.vcf.gz
+      - variation/clinvar.vcf.gz.tbi
