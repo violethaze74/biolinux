@@ -1,0 +1,18 @@
+# Panels of normals (PONs) for variant calling
+# germline_het_pon -- Locations of likely germline heterogygote sites
+---
+attributes:
+  name: varpon
+  version: 20181105
+recipe:
+  full:
+    recipe_type: bash
+    recipe_cmds:
+      - |
+        ref=../seq/hg38.fa
+        mkdir -p variation
+        wget --no-check-certificate -O - 'https://s3.amazonaws.com/biodata/collections/hg38/variation/germline_het_pon.bed.gz' > variation/germline_het_pon.bed.gz
+        wget --no-check-certificate -O - 'https://s3.amazonaws.com/biodata/collections/hg38/variation/germline_het_pon.bed.gz.tbi' > variation/germline_het_pon.bed.gz.tbi
+    recipe_outfiles:
+      - variation/germline_het_pon.bed.gz
+      - variation/germline_het_pon.bed.gz.tbi
